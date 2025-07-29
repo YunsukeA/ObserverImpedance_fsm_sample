@@ -1,56 +1,240 @@
----
-# If true, the FSM transitions are managed by an external tool
-Managed: false
-# If true and the FSM is self-managed, transitions should be triggered
-StepByStep: true
-# Change idle behaviour, if true the state is kept until transition,
-# otherwise the FSM holds the last state until transition
-IdleKeepState: false
-# Where to look for state libraries
-StatesLibraries:
-- "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@"
-- "@MC_STATES_RUNTIME_INSTALL_PREFIX@"
-# Where to look for state files
-StatesFiles:
-- "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@/data"
-- "@MC_STATES_RUNTIME_INSTALL_PREFIX@/data"
-# If true, state factory will be more verbose
-VerboseStateFactory: false
-# Additional robots to load
-robots:
-  ground:
-    module: env/ground
-# General constraints, always on
-constraints:
-- type: contact
-- type: dynamics
-  damper: [0.1, 0.01, 0.5]
-- type: compoundJoint
-# Collision constraint
-collisions:
-- type: collision
-  useMinimal: true
-# Initial set of contacts
-contacts:
-- r2: ground
-  r1Surface: LeftFoot
-  r2Surface: AllGround
-- r2: ground
-  r1Surface: RightFoot
-  r2Surface: AllGround
+# ---
+# Managed: false
+# StepByStep: false
+# IdleKeepState: false
+# # Where to look for state libraries
+# StatesLibraries:
+# - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@"
+# - "@MC_STATES_RUNTIME_INSTALL_PREFIX@"
+# # Where to look for state files
+# StatesFiles:
+# - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@/data"
+# - "@MC_STATES_RUNTIME_INSTALL_PREFIX@/data"
+# # If true, state factory will be more verbose
+# VerboseStateFactory: false
+# # Additional robots to load
+# robots:
+#   ground:
+#     module: env/ground
+#   table:
+#     module: env/table
+#     init_pos:
+#       translation: [0, -1.0, 0.9]
+#       rotation: [0.0, 0.0, 0.0]
+# # General constraints, always on
+# constraints:
+#   - type: contact
+#   - type: dynamics
+#     damper: [0.1, 0.01, 0.5]
+#   - type: compoundJoint
+# # Collision constraint
+# collisions:
+#   - type: collision
+#     useMinimal: true
+#   - type: collision
+#     r1: hrp5_p # jvrc1
+#     r2: table
+#     collisions:
+#       - body1: Lhand_Link0_Plan2
+#         body2: ground
+#         iDist: 0.5
+#         sDist: 0.02
+#         damping: 0.0
+# # Initial set of contacts
+# contacts:
+#   - r1: hrp5_p
+#     r1Surface: LeftFoot
+#     r2: ground
+#     r2Surface: AllGround
+#     dof: [0, 0, 1, 1, 1, 0]
+#   - r1: hrp5_p
+#     r1Surface: RightFoot
+#     r2: ground
+#     r2Surface: AllGround
+#     dof: [0, 0, 1, 1, 1, 0]
 
-# Some options for a specific robot
-jvrc1:
-  posture:
-    stiffness: 1
-    weight: 10
-  ff:
-    stiffness: 2
-    weight: 100
-# Implement some additional text states
-states: {}
-# Transitions map
-transitions:
-- [ObserverbasedImpedanceFSMSample_Initial, OK, ObserverbasedImpedanceFSMSample_Initial, Strict]
-# Initial state
-init: ObserverbasedImpedanceFSMSample_Initial
+# # Some options for a specific robot
+# hrp5_p:
+#   posture:
+#     stiffness: 1.0
+#     weight: 10.0
+#   lipm_stabilizer:
+#     contacts: [Left, Right]
+#     external_wrench:
+#       ## general ##
+#       add_expected_com_offset: true
+#       subtract_measured_value: false
+#       ## com offset ##
+#       modify_com_error: true
+#       modify_zmp_error: true
+#       modify_zmp_error_d: false
+#       com_offset_err_com_limit: 0.1
+#       com_offset_err_zmp_limit: 0.1
+#       ## filter ##
+#       ext_wrench_sum_cutoff: 0.05
+#       com_offset_cutoff: 0.05
+#       com_offset_com_cutoff: 10.0
+#       derivator_time_constant: 1.0
+#     dcm_bias:
+#       dcmMeasureErrorStd: 0.001
+#       biasDriftPerSecondStd: 0.0001
+#       zmpMeasureErrorStd: 0.0005
+#       biasLimit: [0.05, 0.02]
+#       withDCMBias: true
+# # Implement some additional text states
+# states:
+#   StandingBase:
+#     base: MetaTasks
+#     tasks:
+#       KeepChest:
+#         type: orientation
+#         body: Chest_Link0
+#         weight: 100
+#         stiffness: 1.0
+
+#   LIPMStabilizer::Pause_2s:
+#     base: Parallel
+#     states: [StandingBase, Pause]
+#     configs:
+#       Pause:
+#         duration: 2
+
+#   RightHandToTable:
+#     base: StandingBase
+#     tasks:
+#       RightHandTrajectory:
+#         type: bspline_trajectory
+#         setupMode: false
+#         surface: RightHand
+#         weight: 1000
+#         stiffness: 50
+#         duration: 4
+#         dimWeight: [1, 1, 1, 1, 0.5, 0.5]
+#         displaySamples: 100 # Number of points to sample along the trajectory for visual display
+#         target: # relative to world.
+#           translation: [0.120, -0.6, 0.9]
+#           rotation: # RPY or quaternion
+#             [
+#               0, # pi/2
+#               0,
+#               0, # pi/2
+#             ]
+#         controlPoints: [[0.2, -0.38, 1.0]]
+#         # oriWaypoints: [[3.5, [-1.57,  0, 1.57]]]
+#         completion:
+#           timeElapsed: true
+
+#   RightHandImpedance:
+#     base: StandingBase
+#     tasks:
+#       RightHandImpedance:
+#         type: ObserverbasedImpedance
+#         surface: RightHand
+#         stiffness: 1000
+#         damping: 100
+#         weight: 1000
+#         gains: 
+#           mass:
+#             angular: [100, 100, 100]
+#             linear: [100, 100, 100]
+#           damper:
+#             angular: [10, 10, 10]
+#             linear: [10, 10, 10]
+#           spring:
+#             angular: [100, 100, 100]
+#             linear: [100, 100, 100]
+#           wrench:
+#             angular: [1, 1, 1]
+#             linear: [1, 1, 1]
+#           MaxContacts: 4
+#         exportValue:
+#           exportContactWrench: false
+#           exportExternalWrench: false
+#           usingWrench: External
+#         # targetSurface: 
+#         #   robot: table
+#         #   surface: AllGround
+#         #   offset_traslation: [0, 0, 0]
+#         #   offset_rotation: [0, 0, 0]
+#         # wrench:
+#         #   force: [0, 0, 20]
+#         #   couple: [0, 0, 0]
+#         # wrenchGain: 
+#         #   couple: [0, 0, 0]
+#         #   force: [0, 0, 0]
+#         # completion:
+#         #   wrench:
+#         #     force: [.nan, .nan, 20]
+#         #     couple: [.nan, .nan, .nan]
+#         # move:
+#         #   rotation: [0, 0, 0]
+#         #   translation: [0, 0, 1]
+#         # target: # world
+#         #   rotation: [0, 0, 0]
+#         #   translation: [0, 0, 0]
+
+#   RightHandKeepImpedance:
+#     base: Parallel
+#     states: [RightHandImpedance, Pause]
+#     configs:
+#       Pause:
+#         duration: 20
+        
+#   RightHandReleaseImpedance:
+#     base: RightHandImpedance
+#     tasks:
+#       RightHandImpedance:
+#         wrench:
+#           force: [0, 0, 1]
+#           couple: [0, 0, 0]
+#         completion:
+#           wrench:
+#             force: [.nan, .nan, 1]
+#             couple: [.nan, .nan, .nan]
+
+#   RightHandMoveBack:
+#     base: StandingBase
+#     tasks:
+#       RightHandMoveBack:
+#         type: surfaceTransform
+#         weight: 1000
+#         stiffness: 5
+#         surface: RightHand
+#         moveWorld:
+#           translation: [0, 0, 0.2] # relative to the current position of the hand, hand surface frame
+#           rotation: [0, 0, 0]
+#         completion:
+#           AND:
+#             - eval: 0.01
+#             - speed: 0.01
+#     AddCollisionsAfter:
+#       - r1: hrp5_p
+#         r2: table
+#         collisions:
+#           - body1: Rhand_Link0_Plan2 # R_WRIST_Y_S
+#             body2: ground
+#             iDist: 0.15
+#             sDist: 0.05
+#             damping: 0.0
+  
+#   StandingHalfSitting:
+#     base: Parallel
+#     states: [StandingBase, HalfSitting]
+#     configs:
+#       HalfSitting:
+#         stiffness: 5
+#         completion:
+#           eval: 0.01
+# # Transitions map
+# transitions:
+#   - [LIPMStabilizer::Pause_2s,   OK, RightHandToTable, Auto]
+#   - [RightHandToTable,           OK, RightHandImpedance, Auto]
+#   - [RightHandImpedance,         OK, RightHandKeepImpedance, Auto]
+#   - [RightHandKeepImpedance,     OK, RightHandReleaseImpedance, Auto]
+#   - [RightHandReleaseImpedance,  OK, RightHandMoveBack, Auto]
+#   - [RightHandMoveBack,          OK, StandingHalfSitting, Auto]
+# # Initial state
+# init: LIPMStabilizer::Pause_2s
+
+
+
