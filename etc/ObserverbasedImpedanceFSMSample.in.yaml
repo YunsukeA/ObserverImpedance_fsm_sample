@@ -1,26 +1,23 @@
 # ---
+# # CnoidEnv_ElbowTest.cnoid
+
 # Managed: false
-# StepByStep: false
+# StepByStep: true
 # IdleKeepState: false
 # # Where to look for state libraries
 # StatesLibraries:
-# - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@"
-# - "@MC_STATES_RUNTIME_INSTALL_PREFIX@"
+# - "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states"
+# - "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states"
 # # Where to look for state files
 # StatesFiles:
-# - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@/data"
-# - "@MC_STATES_RUNTIME_INSTALL_PREFIX@/data"
+# - "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states/data"
+# - "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states/data"
 # # If true, state factory will be more verbose
 # VerboseStateFactory: false
 # # Additional robots to load
 # robots:
 #   ground:
 #     module: env/ground
-#   table:
-#     module: env/table
-#     init_pos:
-#       translation: [0, -1.0, 0.9]
-#       rotation: [0.0, 0.0, 0.0]
 # # General constraints, always on
 # constraints:
 #   - type: contact
@@ -31,16 +28,6 @@
 # collisions:
 #   - type: collision
 #     useMinimal: true
-#   - type: collision
-#     r1: hrp5_p # jvrc1
-#     r2: table
-#     collisions:
-#       - body1: Lhand_Link0_Plan2
-#         body2: ground
-#         iDist: 0.5
-#         sDist: 0.02
-#         damping: 0.0
-# # Initial set of contacts
 # contacts:
 #   - r1: hrp5_p
 #     r1Surface: LeftFoot
@@ -99,142 +86,74 @@
 #       Pause:
 #         duration: 2
 
-#   RightHandToTable:
+#   RightElbowToTable:
 #     base: StandingBase
 #     tasks:
-#       RightHandTrajectory:
+#       RightElbowTrajectory:
 #         type: bspline_trajectory
 #         setupMode: false
-#         surface: RightHand
+#         surface: RForearmBack
 #         weight: 1000
 #         stiffness: 50
 #         duration: 4
 #         dimWeight: [1, 1, 1, 1, 0.5, 0.5]
 #         displaySamples: 100 # Number of points to sample along the trajectory for visual display
 #         target: # relative to world.
-#           translation: [0.120, -0.6, 0.9]
+#           translation: [0.240, -0.425, 1] 
 #           rotation: # RPY or quaternion
 #             [
-#               0, # pi/2
-#               0,
-#               0, # pi/2
+#               -1.5707963267948966192313216916398, 0, 0
 #             ]
-#         controlPoints: [[0.2, -0.38, 1.0]]
-#         # oriWaypoints: [[3.5, [-1.57,  0, 1.57]]]
 #         completion:
 #           timeElapsed: true
 
-#   RightHandImpedance:
+#   RightElbowImpedance:
 #     base: StandingBase
 #     tasks:
-#       RightHandImpedance:
+#       RightElbowImpedance:
 #         type: ObserverbasedImpedance
-#         surface: RightHand
+#         surface: RForearmBack
 #         stiffness: 1000
-#         damping: 100
-#         weight: 1000
 #         gains: 
 #           mass:
-#             angular: [100, 100, 100]
-#             linear: [100, 100, 100]
-#           damper:
-#             angular: [10, 10, 10]
-#             linear: [10, 10, 10]
-#           spring:
-#             angular: [100, 100, 100]
-#             linear: [100, 100, 100]
-#           wrench:
 #             angular: [1, 1, 1]
 #             linear: [1, 1, 1]
-#           MaxContacts: 4
+#           damper:
+#             angular: [250, 250, 250]
+#             linear: [250, 250, 250]
+#           spring:
+#             angular: [0, 0, 0]
+#             linear: [0, 0, 0]
+#           wrench:
+#             angular: [0.02, 0.02, 0.02]
+#             linear: [0.02, 0.02, 0.02]
+#         MaxContacts: 4
 #         exportValue:
 #           exportContactWrench: false
-#           exportExternalWrench: false
+#           exportExternalWrench: true
 #           usingWrench: External
-#         # targetSurface: 
-#         #   robot: table
-#         #   surface: AllGround
-#         #   offset_traslation: [0, 0, 0]
-#         #   offset_rotation: [0, 0, 0]
-#         # wrench:
-#         #   force: [0, 0, 20]
-#         #   couple: [0, 0, 0]
-#         # wrenchGain: 
-#         #   couple: [0, 0, 0]
-#         #   force: [0, 0, 0]
-#         # completion:
-#         #   wrench:
-#         #     force: [.nan, .nan, 20]
-#         #     couple: [.nan, .nan, .nan]
-#         # move:
-#         #   rotation: [0, 0, 0]
-#         #   translation: [0, 0, 1]
-#         # target: # world
-#         #   rotation: [0, 0, 0]
-#         #   translation: [0, 0, 0]
-
-#   RightHandKeepImpedance:
-#     base: Parallel
-#     states: [RightHandImpedance, Pause]
-#     configs:
-#       Pause:
-#         duration: 20
-        
-#   RightHandReleaseImpedance:
-#     base: RightHandImpedance
-#     tasks:
-#       RightHandImpedance:
+#         addPlot: true
 #         wrench:
-#           force: [0, 0, 1]
+#           force: [0, 0, 0]
 #           couple: [0, 0, 0]
 #         completion:
-#           wrench:
-#             force: [.nan, .nan, 1]
-#             couple: [.nan, .nan, .nan]
+#           timeout: 10000
+#         target: # world
+#           rotation: [-1.5707963267948966192313216916398, 0, 0] # RPY or quaternion [0.870531, 0.027, -0.5, 0.045]
+#           translation: [0.240, -0.425, 1] 
 
-#   RightHandMoveBack:
-#     base: StandingBase
-#     tasks:
-#       RightHandMoveBack:
-#         type: surfaceTransform
-#         weight: 1000
-#         stiffness: 5
-#         surface: RightHand
-#         moveWorld:
-#           translation: [0, 0, 0.2] # relative to the current position of the hand, hand surface frame
-#           rotation: [0, 0, 0]
-#         completion:
-#           AND:
-#             - eval: 0.01
-#             - speed: 0.01
-#     AddCollisionsAfter:
-#       - r1: hrp5_p
-#         r2: table
-#         collisions:
-#           - body1: Rhand_Link0_Plan2 # R_WRIST_Y_S
-#             body2: ground
-#             iDist: 0.15
-#             sDist: 0.05
-#             damping: 0.0
-  
-#   StandingHalfSitting:
+#   RightElbowKeepImpedance:
 #     base: Parallel
-#     states: [StandingBase, HalfSitting]
+#     states: [RightElbowImpedance, Pause]
 #     configs:
-#       HalfSitting:
-#         stiffness: 5
-#         completion:
-#           eval: 0.01
+#       Pause:
+#         duration: 20000
+  
 # # Transitions map
 # transitions:
-#   - [LIPMStabilizer::Pause_2s,   OK, RightHandToTable, Auto]
-#   - [RightHandToTable,           OK, RightHandImpedance, Auto]
-#   - [RightHandImpedance,         OK, RightHandKeepImpedance, Auto]
-#   - [RightHandKeepImpedance,     OK, RightHandReleaseImpedance, Auto]
-#   - [RightHandReleaseImpedance,  OK, RightHandMoveBack, Auto]
-#   - [RightHandMoveBack,          OK, StandingHalfSitting, Auto]
+#   - [LIPMStabilizer::Pause_2s,   OK, RightElbowToTable, Auto]
+#   - [RightElbowToTable,           OK, RightElbowImpedance, Auto]
+#   - [RightElbowImpedance,         OK, RightElbowKeepImpedance, Auto]
+
 # # Initial state
 # init: LIPMStabilizer::Pause_2s
-
-
-

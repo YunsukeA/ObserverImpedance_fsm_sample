@@ -1,0 +1,159 @@
+---
+# CnoidEnv_ElbowTest.cnoid
+
+Managed: false
+StepByStep: true
+IdleKeepState: false
+# Where to look for state libraries
+StatesLibraries:
+- "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states"
+- "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states"
+# Where to look for state files
+StatesFiles:
+- "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states/data"
+- "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states/data"
+# If true, state factory will be more verbose
+VerboseStateFactory: false
+# Additional robots to load
+robots:
+  ground:
+    module: env/ground
+# General constraints, always on
+constraints:
+  - type: contact
+  - type: dynamics
+    damper: [0.1, 0.01, 0.5]
+  - type: compoundJoint
+# Collision constraint
+collisions:
+  - type: collision
+    useMinimal: true
+contacts:
+  - r1: hrp5_p
+    r1Surface: LeftFoot
+    r2: ground
+    r2Surface: AllGround
+    dof: [0, 0, 1, 1, 1, 0]
+  - r1: hrp5_p
+    r1Surface: RightFoot
+    r2: ground
+    r2Surface: AllGround
+    dof: [0, 0, 1, 1, 1, 0]
+
+# Some options for a specific robot
+hrp5_p:
+  posture:
+    stiffness: 1.0
+    weight: 10.0
+  lipm_stabilizer:
+    contacts: [Left, Right]
+    external_wrench:
+      ## general ##
+      add_expected_com_offset: true
+      subtract_measured_value: false
+      ## com offset ##
+      modify_com_error: true
+      modify_zmp_error: true
+      modify_zmp_error_d: false
+      com_offset_err_com_limit: 0.1
+      com_offset_err_zmp_limit: 0.1
+      ## filter ##
+      ext_wrench_sum_cutoff: 0.05
+      com_offset_cutoff: 0.05
+      com_offset_com_cutoff: 10.0
+      derivator_time_constant: 1.0
+    dcm_bias:
+      dcmMeasureErrorStd: 0.001
+      biasDriftPerSecondStd: 0.0001
+      zmpMeasureErrorStd: 0.0005
+      biasLimit: [0.05, 0.02]
+      withDCMBias: true
+# Implement some additional text states
+states:
+  StandingBase:
+    base: MetaTasks
+    tasks:
+      KeepChest:
+        type: orientation
+        body: Chest_Link0
+        weight: 100
+        stiffness: 1.0
+
+  LIPMStabilizer::Pause_2s:
+    base: Parallel
+    states: [StandingBase, Pause]
+    configs:
+      Pause:
+        duration: 2
+
+  RightElbowToTable:
+    base: StandingBase
+    tasks:
+      RightElbowTrajectory:
+        type: bspline_trajectory
+        setupMode: false
+        surface: RForearmBack
+        weight: 1000
+        stiffness: 50
+        duration: 4
+        dimWeight: [1, 1, 1, 1, 0.5, 0.5]
+        displaySamples: 100 # Number of points to sample along the trajectory for visual display
+        target: # relative to world.
+          translation: [0.240, -0.425, 1] 
+          rotation: # RPY or quaternion
+            [
+              -1.5707963267948966192313216916398, 0, 0
+            ]
+        completion:
+          timeElapsed: true
+
+  RightElbowImpedance:
+    base: StandingBase
+    tasks:
+      RightElbowImpedance:
+        type: ObserverbasedImpedance
+        surface: RForearmBack
+        stiffness: 1000
+        gains: 
+          mass:
+            angular: [1, 1, 1]
+            linear: [1, 1, 1]
+          damper:
+            angular: [500, 500, 500]
+            linear: [500, 500, 500]
+          spring:
+            angular: [0, 0, 0]
+            linear: [0, 0, 0]
+          wrench:
+            angular: [0.05, 0.05, 0.05]
+            linear: [0.05, 0.05, 0.05]
+        MaxContacts: 4
+        exportValue:
+          exportContactWrench: false
+          exportExternalWrench: true
+          usingWrench: External
+        addPlot: true
+        wrench:
+          force: [0, 0, 0]
+          couple: [0, 0, 0]
+        completion:
+          timeout: 10000
+        target: # world
+          rotation: [-1.5707963267948966192313216916398, 0, 0] # RPY or quaternion [0.870531, 0.027, -0.5, 0.045]
+          translation: [0.240, -0.425, 1] 
+
+  RightElbowKeepImpedance:
+    base: Parallel
+    states: [RightElbowImpedance, Pause]
+    configs:
+      Pause:
+        duration: 20000
+  
+# Transitions map
+transitions:
+  - [LIPMStabilizer::Pause_2s,   OK, RightElbowToTable, Auto]
+  - [RightElbowToTable,           OK, RightElbowImpedance, Auto]
+  - [RightElbowImpedance,         OK, RightElbowKeepImpedance, Auto]
+
+# Initial state
+init: LIPMStabilizer::Pause_2s

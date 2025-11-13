@@ -1,0 +1,229 @@
+---
+Managed: false
+StepByStep: true
+IdleKeepState: false
+# Where to look for state libraries
+StatesLibraries:
+- "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states"
+- "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states"
+# Where to look for state files
+StatesFiles:
+- "/home/aoyaman22/devel/install/lib/mc_controller/fsm/states/data"
+- "/home/aoyaman22/devel/install/lib/mc_controller/ObserverbasedImpedanceFSMSample/states/data"
+# If true, state factory will be more verbose
+VerboseStateFactory: false
+# Additional robots to load
+robots:
+  ground:
+    module: env/ground
+  table:
+    module: MCC/ElbowContactWalkField
+    init_pos:
+      translation: [0, -1.0, 0.9]
+      rotation: [0.0, 0.0, 0.0]
+# General constraints, always on
+constraints:
+  - type: contact
+  - type: dynamics
+    damper: [0.1, 0.01, 0.5]
+  - type: compoundJoint
+# Collision constraint
+collisions:
+  - type: collision
+    useMinimal: true
+  - type: collision
+    r1: hrp5_p # jvrc1
+    r2: table
+    # collisions:
+    #   - body1: Lhand_Link0_Plan2
+    #     body2: ground
+    #     iDist: 0.5
+    #     sDist: 0.02
+    #     damping: 0.0
+# Initial set of contacts
+contacts:
+  - r1: hrp5_p
+    r1Surface: LeftFoot
+    r2: ground
+    r2Surface: AllGround
+    dof: [0, 0, 1, 1, 1, 0]
+  - r1: hrp5_p
+    r1Surface: RightFoot
+    r2: ground
+    r2Surface: AllGround
+    dof: [0, 0, 1, 1, 1, 0]
+
+# Some options for a specific robot
+hrp5_p:
+  posture:
+    stiffness: 1.0
+    weight: 10.0
+  lipm_stabilizer:
+    contacts: [Left, Right]
+    external_wrench:
+      ## general ##
+      add_expected_com_offset: true
+      subtract_measured_value: false
+      ## com offset ##
+      modify_com_error: true
+      modify_zmp_error: true
+      modify_zmp_error_d: false
+      com_offset_err_com_limit: 0.1
+      com_offset_err_zmp_limit: 0.1
+      ## filter ##
+      ext_wrench_sum_cutoff: 0.05
+      com_offset_cutoff: 0.05
+      com_offset_com_cutoff: 10.0
+      derivator_time_constant: 1.0
+    dcm_bias:
+      dcmMeasureErrorStd: 0.001
+      biasDriftPerSecondStd: 0.0001
+      zmpMeasureErrorStd: 0.0005
+      biasLimit: [0.05, 0.02]
+      withDCMBias: true
+# Implement some additional text states
+states:
+  StandingBase:
+    base: MetaTasks
+    tasks:
+      KeepChest:
+        type: orientation
+        body: Chest_Link0
+        weight: 100
+        stiffness: 1.0
+
+  LIPMStabilizer::Pause_2s:
+    base: Parallel
+    states: [StandingBase, Pause]
+    configs:
+      Pause:
+        duration: 2
+
+  RightHandToTable:
+    base: StandingBase
+    tasks:
+      RightHandTrajectory:
+        type: bspline_trajectory
+        setupMode: false
+        surface: RForearmBack
+        weight: 1000
+        stiffness: 50
+        duration: 4
+        dimWeight: [1, 1, 1, 1, 0.5, 0.5]
+        displaySamples: 100 # Number of points to sample along the trajectory for visual display
+        target: # relative to world.
+          translation: [-0.130, -0.3, 0.9] 
+          rotation: # RPY or quaternion
+            [
+              0.870531, 0.027, -0.5, 0.045
+            ]
+        controlPoints: [[0.2, -0.38, 1.0]]
+        # oriWaypoints: [[3.5, [-1.57,  0, 1.57]]]
+        completion:
+          timeElapsed: true
+
+  RightHandImpedance:
+    base: StandingBase
+    tasks:
+      RightHandImpedance:
+        type: ObserverbasedImpedance
+        surface: RForearmBack
+        stiffness: 1000
+        # damping: 100
+        # weight: 1000
+        gains: 
+          mass:
+            angular: [1, 1, 1]
+            linear: [1, 1, 1]
+          damper:
+            angular: [250, 250, 250]
+            linear: [250, 250, 250]
+          spring:
+            angular: [0, 0, 0]
+            linear: [0, 0, 0]
+          wrench:
+            angular: [0.01, 0.01, 0.01]
+            linear: [0.01, 0.01, 0.03]
+        MaxContacts: 4
+        exportValue:
+          exportContactWrench: false
+          exportExternalWrench: true
+          usingWrench: External
+        addPlot: true
+        wrench:
+          force: [0, 0, 20]
+          couple: [0, 0, 0]
+        completion:
+          # wrench:
+          #   force: [.nan, .nan, 20]
+          #   couple: [.nan, .nan, .nan]
+          timeout: 5
+        target: # world
+          rotation: [0.870531, 0.027, -0.5, 0.045] # RPY or quaternion [0.870531, 0.027, -0.5, 0.045] 
+          translation: [-0.130, -0.3, 0.9] 
+
+  RightHandKeepImpedance:
+    base: Parallel
+    states: [RightHandImpedance, Pause]
+    configs:
+      Pause:
+        duration: 20
+        
+  RightHandReleaseImpedance:
+    base: RightHandImpedance
+    tasks:
+      RightHandImpedance:
+        wrench:
+          force: [0, 0, 1]
+          couple: [0, 0, 0]
+        completion:
+          wrench:
+            force: [.nan, .nan, 1]
+            couple: [.nan, .nan, .nan]
+
+  RightHandMoveBack:
+    base: StandingBase
+    tasks:
+      RightHandMoveBack:
+        type: surfaceTransform
+        weight: 1000
+        stiffness: 5
+        surface: RForearmBack
+        moveWorld:
+          translation: [0, 0, 0.1] # relative to the current position of the hand, hand surface frame
+          rotation: [0, 0, 0]
+        completion:
+          AND:
+            - eval: 0.01
+            - speed: 0.01
+    AddCollisionsAfter:
+      - r1: hrp5_p
+        r2: table
+        # collisions:
+        #   - body1: Rhand_Link0_Plan2 # R_WRIST_Y_S
+        #     body2: ground
+        #     iDist: 0.15
+        #     sDist: 0.05
+        #     damping: 0.0
+  
+  StandingHalfSitting:
+    base: Parallel
+    states: [StandingBase, HalfSitting]
+    configs:
+      HalfSitting:
+        stiffness: 5
+        completion:
+          eval: 0.01
+# Transitions map
+transitions:
+  - [LIPMStabilizer::Pause_2s,   OK, RightHandToTable, Auto]
+  - [RightHandToTable,           OK, RightHandImpedance, Auto]
+  - [RightHandImpedance,         OK, RightHandKeepImpedance, Auto]
+  - [RightHandKeepImpedance,     OK, RightHandReleaseImpedance, Auto]
+  - [RightHandReleaseImpedance,  OK, RightHandMoveBack, Auto]
+  - [RightHandMoveBack,          OK, StandingHalfSitting, Auto]
+# Initial state
+init: LIPMStabilizer::Pause_2s
+
+
+
